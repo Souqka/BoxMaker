@@ -1,12 +1,15 @@
 import { resolveDimensions } from "./dimensions.js";
 import { createJoint } from "./joints.js";
 import { layoutPanels } from "./layout.js";
+import { PANEL_LIMITS } from "./panelLimits.js";
 import { createBoxPanels } from "./panels.js";
 
 /**
- * User parameters → Dimension Engine → panels → sheet layout.
- * Panel outlines are still placeholders. The joint object is shared so a
- * later geometry step can read the same construction the sizes used.
+ * User parameters → Dimension Engine → placeholder panels → sheet layout.
+ * The result is the handoff for Geometry Engine: both envelopes, material,
+ * construction, the 700 × 500 panel limit, and the standard layout.
+ * validatePanelSize is not applied here. Placeholder rectangles are not
+ * finished parts, and the limit is not a check of the box width.
  */
 export function buildBoxGeometry(box) {
   let joint;
@@ -48,7 +51,10 @@ export function buildBoxGeometry(box) {
     issues: [],
     geometry: {
       dimensions,
+      material: dimensions.material,
+      construction: box.construction,
       jointType: box.construction,
+      panelLimits: { ...PANEL_LIMITS },
       panels,
       layout,
     },

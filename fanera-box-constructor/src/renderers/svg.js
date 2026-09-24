@@ -20,12 +20,12 @@ export function renderBoxToSvg(geometry) {
 
     cut.push(
       `<g data-panel="${escapeXml(panel.id)}">` +
-        `<path d="${pathFrom(panel.outline, placement, layout.height)}" fill="#fffdf8" stroke="#241e18" stroke-width="0.6" />` +
+        `<path d="${pathFrom(panel.outline, placement, layout.height, panel)}" fill="#fffdf8" stroke="#241e18" stroke-width="0.6" />` +
         `</g>`,
     );
 
     for (const item of panel.engraving) {
-      const corners = engravingCorners(item).map((point) => toSheet(point, placement, layout.height));
+      const corners = engravingCorners(item).map((point) => toSheet(point, placement, layout.height, panel));
       engraving.push(
         `<polygon data-engraving="${escapeXml(item.id)}" points="${corners
           .map((point) => `${fmt(point.x)},${fmt(point.y)}`)
@@ -37,6 +37,7 @@ export function renderBoxToSvg(geometry) {
       { x: panel.width / 2, y: panel.height / 2 },
       placement,
       layout.height,
+      panel,
     );
     dimensions.push(
       `<text x="${fmt(label.x)}" y="${fmt(label.y)}" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif" font-size="8" fill="#5c5346">` +
@@ -55,15 +56,32 @@ export function renderBoxToSvg(geometry) {
   ].join("");
 }
 
-function toSheet(point, placement, sheetHeight) {
-  const x = placement.x + point.x;
-  const y = placement.y + point.y;
-  return { x, y: sheetHeight - y };
+function toSheet(point, placement, sheetHeight, panel) {
+  const local = rotateLocal(point, placement.rotation ?? 0, panel.width, panel.height);
+  return {
+    x: placement.x + local.x,
+    y: sheetHeight - (placement.y + local.y),
+  };
 }
 
-function pathFrom(points, placement, sheetHeight) {
+function rotateLocal(point, rotation, width, height) {
+  if (!rotation) return point;
+  const centerX = width / 2;
+  const centerY = height / 2;
+  const radians = (rotation * Math.PI) / 180;
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+  const dx = point.x - centerX;
+  const dy = point.y - centerY;
+  return {
+    x: centerX + dx * cos - dy * sin,
+    y: centerY + dx * sin + dy * cos,
+  };
+}
+
+function pathFrom(points, placement, sheetHeight, panel) {
   if (points.length === 0) return "";
-  const mapped = points.map((point) => toSheet(point, placement, sheetHeight));
+  const mapped = points.map((point) => toSheet(point, placement, sheetHeight, panel));
   const [first, ...rest] = mapped;
   return `M ${fmt(first.x)} ${fmt(first.y)} ${rest.map((point) => `L ${fmt(point.x)} ${fmt(point.y)}`).join(" ")} Z`;
 }
@@ -92,12 +110,12 @@ function engravingCorners(item) {
 
 function panelLabel(id) {
   const labels = {
-    front: "перед",
-    back: "зад",
-    left: "лево",
-    right: "право",
-    bottom: "дно",
     lid: "крышка",
+    "side-1": "1 бок",
+    front: "перед",
+    bottom: "дно",
+    back: "зад",
+    "side-2": "2 бок",
   };
   return labels[id] ?? id;
 }

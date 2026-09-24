@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { COORDINATES, normalizeDimensions, resolveDimensions } from "../src/geometry/dimensions.js";
+import { COORDINATES, MIN_BOX_DIMENSION, normalizeDimensions, resolveDimensions } from "../src/geometry/dimensions.js";
 import { createJoint } from "../src/geometry/joints.js";
 
 const EPSILON = 1e-9;
@@ -150,21 +150,35 @@ test("normalizeDimensions coerces numeric strings and keeps full precision", () 
   assert.equal(normalized.material.thickness, 4.5);
 });
 
-test("rejects zero and negative box sizes", () => {
+test("rejects box sizes below 10 mm once", () => {
+  assert.equal(MIN_BOX_DIMENSION, 10);
   const cases = [
-    [{ width: 0, depth: 200, height: 100 }, "width"],
-    [{ width: -1, depth: 200, height: 100 }, "width"],
-    [{ width: 300, depth: 0, height: 100 }, "depth"],
-    [{ width: 300, depth: 200, height: 0 }, "height"],
+    [{ width: 9.999, depth: 200, height: 100 }, "width", "Width"],
+    [{ width: 0, depth: 200, height: 100 }, "width", "Width"],
+    [{ width: -1, depth: 200, height: 100 }, "width", "Width"],
+    [{ width: 300, depth: 0, height: 100 }, "depth", "Depth"],
+    [{ width: 300, depth: 200, height: 0 }, "height", "Height"],
+    [{ width: 300, depth: 200, height: 9 }, "height", "Height"],
   ];
 
-  for (const [dimensions, field] of cases) {
+  for (const [dimensions, field, label] of cases) {
     const resolved = resolve(dimensions, "external", 4);
     assert.equal(resolved.valid, false);
     const issue = resolved.errors.find((item) => item.field === field);
-    assert.equal(issue.code, "INVALID_VALUE");
-    assert.match(issue.message, /greater than zero/i);
+    assert.equal(issue.code, "MIN_DIMENSION");
+    assert.equal(issue.message, `${label} cannot be less than 10 mm.`);
+    assert.equal(resolved.errors.filter((item) => item.field === field).length, 1);
   }
+});
+
+test("accepts the 10 mm minimum and does not treat a wide box as a panel error", () => {
+  const minimum = resolve({ width: 10, depth: 10, height: 10 }, "external", 3);
+  assert.equal(minimum.valid, true);
+  assertSize(minimum.internal, { width: 4, depth: 4, height: 4 });
+
+  const wide = resolve({ width: 800, depth: 200, height: 100 }, "external", 4);
+  assert.equal(wide.valid, true);
+  assert.equal(wide.errors, undefined);
 });
 
 test("rejects zero thickness, negative kerf and negative clearance", () => {

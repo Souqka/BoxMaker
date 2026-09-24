@@ -6,7 +6,7 @@ import { resizeLogo, rotateLogo, translateLogo } from "../src/editor/transform.j
 import { buildBoxGeometry, measureEnvelope } from "../src/geometry/box.js";
 import { resolveDimensions } from "../src/geometry/dimensions.js";
 import { createJoint } from "../src/geometry/joints.js";
-import { createPanel } from "../src/geometry/panels.js";
+import { BOX_PANEL_IDS, createPanel } from "../src/geometry/panels.js";
 import { createBox } from "../src/models/BoxModel.js";
 import { createLogo } from "../src/models/Logo.js";
 import { createMaterial } from "../src/models/Material.js";
@@ -53,13 +53,12 @@ test("validation reports non-positive sizes and bad kerf or clearance", () => {
     material: { thickness: 0, kerf: -1, clearance: -0.2 },
   });
   const issues = validateBox(box);
-  const fields = issues.map((issue) => issue.field);
-  assert.ok(fields.includes("width"));
-  assert.ok(fields.includes("depth"));
-  assert.ok(fields.includes("thickness"));
-  assert.ok(fields.includes("kerf"));
-  assert.ok(fields.includes("clearance"));
-  assert.ok(issues.every((issue) => issue.code === "INVALID_VALUE" && issue.message));
+  const byField = Object.fromEntries(issues.map((issue) => [issue.field, issue.code]));
+  assert.equal(byField.width, "MIN_DIMENSION");
+  assert.equal(byField.depth, "MIN_DIMENSION");
+  assert.equal(byField.thickness, "INVALID_VALUE");
+  assert.equal(byField.kerf, "INVALID_VALUE");
+  assert.equal(byField.clearance, "INVALID_VALUE");
   assert.equal(buildBoxGeometry(box).ok, false);
 });
 
@@ -136,12 +135,16 @@ test("builds six placeholder panels without folding", () => {
   const built = buildBoxGeometry(sampleBox());
   assert.deepEqual(
     built.geometry.panels.map((panel) => panel.id),
-    ["front", "back", "left", "right", "bottom", "lid"],
+    BOX_PANEL_IDS,
   );
-  const front = built.geometry.panels[0];
+  const front = built.geometry.panels.find((panel) => panel.id === "front");
   assert.equal(front.outline.length, 4);
   assert.equal(front.width, 300);
   assert.equal(front.height, 100);
+  assert.deepEqual(built.geometry.panelLimits, { maxWidth: 700, maxHeight: 500, unit: "mm" });
+  assert.equal(built.geometry.material.thickness, 4);
+  assert.equal(built.geometry.material.kerf, 0.15);
+  assert.equal(built.geometry.construction, "tab-slot");
 });
 
 test("creates a logo in panel millimetres and draws it on the engraving layer", () => {
@@ -161,7 +164,10 @@ test("creates a logo in panel millimetres and draws it on the engraving layer", 
   assert.equal(logo.rotation, 15);
 
   const built = buildBoxGeometry(sampleBox());
-  const front = attachLogo(built.geometry.panels[0], logo);
+  const front = attachLogo(
+    built.geometry.panels.find((panel) => panel.id === "front"),
+    logo,
+  );
   const moved = translateLogo(front.engraving[0], 5, -2);
   const scaled = resizeLogo(moved, 40, 16);
   const rotated = rotateLogo(scaled, 25);

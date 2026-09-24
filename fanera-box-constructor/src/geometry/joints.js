@@ -6,16 +6,16 @@
  * is than the internal cavity. It does not own UI state.
  *
  * Closed tab-slot box: the cavity is closed by a sheet at each end of an axis.
- * Width loses the left and right panels, depth the front and back, height the
- * bottom and lid. Kerf and clearance describe the cut and the fit; they do
- * not change this nominal envelope.
+ * Width loses side-1 and side-2, depth the front and back, height the bottom
+ * and lid. Kerf and clearance describe the cut and the fit; they do not
+ * change this nominal envelope.
  */
 const JOINTS = {
   "tab-slot": createTabSlotJoint,
 };
 
 const CLOSED_TAB_SLOT_PANELS = {
-  width: ["left", "right"],
+  width: ["side-1", "side-2"],
   depth: ["front", "back"],
   height: ["bottom", "lid"],
 };

@@ -20,6 +20,9 @@ export const COORDINATES = {
   unit: "mm",
 };
 
+/** Smallest accepted box size on each axis. Checked only in normalizeDimensions. */
+export const MIN_BOX_DIMENSION = 10;
+
 const AXES = [
   ["width", "Width"],
   ["depth", "Depth"],
@@ -44,9 +47,9 @@ export function normalizeDimensions({ dimensions = {}, dimensionMode, material =
   checkFinite(errors, clearance, "clearance", "Clearance");
 
   if (errors.length === 0) {
-    checkPositive(errors, width, "width", "Width");
-    checkPositive(errors, depth, "depth", "Depth");
-    checkPositive(errors, height, "height", "Height");
+    checkMinimum(errors, width, "width", "Width");
+    checkMinimum(errors, depth, "depth", "Depth");
+    checkMinimum(errors, height, "height", "Height");
     checkPositive(errors, thickness, "thickness", "Thickness");
     if (kerf < 0) errors.push(error("kerf", "INVALID_VALUE", "Kerf cannot be negative."));
     if (clearance < 0) errors.push(error("clearance", "INVALID_VALUE", "Clearance cannot be negative."));
@@ -129,6 +132,7 @@ export function resolveDimensions({ dimensions, dimensionMode, material, joint }
     },
     external,
     internal,
+    material: normalized.material,
   };
 }
 
@@ -183,6 +187,14 @@ function toNumber(value) {
 function checkFinite(errors, value, field, label) {
   if (!Number.isFinite(value)) {
     errors.push(error(field, "NOT_FINITE", `${label} must be a finite number.`));
+  }
+}
+
+function checkMinimum(errors, value, field, label) {
+  if (!(value >= MIN_BOX_DIMENSION)) {
+    errors.push(
+      error(field, "MIN_DIMENSION", `${label} cannot be less than ${MIN_BOX_DIMENSION} mm.`),
+    );
   }
 }
 
