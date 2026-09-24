@@ -74,12 +74,14 @@ legend {
   margin: 0.35rem 0;
 }
 
-input[type="number"] {
+input[type="number"], select {
   width: 7rem;
   border: 1px solid #d5cbbd;
   border-radius: 6px;
   padding: 0.3rem 0.4rem;
   font: inherit;
+  background: #fffdf8;
+  color: inherit;
 }
 
 button {
@@ -116,11 +118,32 @@ button {
   height: 420px;
 }
 
-.note {
-  display: block;
-  margin-top: 0.35rem;
-  color: #655c52;
+.debug {
+  margin: 0 0 0.7rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px dashed #c9bfb1;
+  border-radius: 8px;
+  background: #fbf8f3;
+  color: #4e463e;
 }
+
+.debug h2 {
+  margin: 0 0 0.35rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #6d645a;
+}
+
+.debug dl {
+  display: grid;
+  grid-template-columns: minmax(0, 11rem) minmax(0, 1fr);
+  gap: 0.15rem 0.6rem;
+  margin: 0;
+}
+
+.debug dt { color: #6d645a; }
+.debug dd { margin: 0; }
 
 @media (max-width: 800px) {
   .top { flex-direction: column; }

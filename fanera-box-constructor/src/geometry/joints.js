@@ -1,40 +1,48 @@
+/**
+ * Joint Engine.
+ *
+ * Coordinates: X = width, Y = depth, Z = height, millimetres.
+ * A joint tells the Dimension Engine how much larger the external envelope
+ * is than the internal cavity. It does not own UI state.
+ *
+ * Closed tab-slot box: the cavity is closed by a sheet at each end of an axis.
+ * Width loses the left and right panels, depth the front and back, height the
+ * bottom and lid. Kerf and clearance describe the cut and the fit; they do
+ * not change this nominal envelope.
+ */
 const JOINTS = {
   "tab-slot": createTabSlotJoint,
 };
 
-/**
- * Joint Engine entry point. Geometry asks this object for features and for
- * the envelope projection. It does not switch on `joint.type` itself.
- */
+const CLOSED_TAB_SLOT_PANELS = {
+  width: ["left", "right"],
+  depth: ["front", "back"],
+  height: ["bottom", "lid"],
+};
+
 export function createJoint(config = {}) {
   const type = config.type ?? "tab-slot";
   const build = JOINTS[type];
   if (!build) {
-    const error = new Error(`Соединение «${type}» пока не поддерживается.`);
-    error.code = "unsupported-joint";
+    const error = new Error(`Joint type "${type}" is not supported.`);
+    error.code = "UNSUPPORTED_JOINT";
     throw error;
   }
   return build(config);
 }
 
-/**
- * Tab-and-slot placeholder.
- * `projectOppositeEnvelope` is the seam the Dimension Engine will replace
- * when panel positions exist. Today it keeps the typed size, so the app
- * does not pretend that internal = external − 2 × thickness.
- */
 function createTabSlotJoint() {
   return {
     type: "tab-slot",
-    envelopeIsProvisional: true,
-    projectOppositeEnvelope(_mode, size, _material) {
+    getDimensionAdjustment(material) {
+      const thickness = material.thickness;
       return {
-        width: size.width,
-        depth: size.depth,
-        height: size.height,
+        width: CLOSED_TAB_SLOT_PANELS.width.length * thickness,
+        depth: CLOSED_TAB_SLOT_PANELS.depth.length * thickness,
+        height: CLOSED_TAB_SLOT_PANELS.height.length * thickness,
       };
     },
-    featuresForEdge(_edge) {
+    featuresForEdge() {
       return { tabs: [], slots: [] };
     },
   };

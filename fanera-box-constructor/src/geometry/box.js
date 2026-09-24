@@ -2,29 +2,24 @@ import { resolveDimensions } from "./dimensions.js";
 import { createJoint } from "./joints.js";
 import { layoutPanels } from "./layout.js";
 import { createBoxPanels } from "./panels.js";
-import { validateBox } from "../validation.js";
 
 /**
- * User parameters → joint → dimensions → panels → sheet layout.
- * Renderers consume the returned geometry and do not recalculate it.
+ * User parameters → Dimension Engine → panels → sheet layout.
+ * Panel outlines are still placeholders. The joint object is shared so a
+ * later geometry step can read the same construction the sizes used.
  */
 export function buildBoxGeometry(box) {
-  const issues = validateBox(box);
-  if (issues.length > 0) {
-    return { ok: false, issues };
-  }
-
   let joint;
   try {
     joint = createJoint({ type: box.construction });
-  } catch (error) {
+  } catch (cause) {
     return {
       ok: false,
       issues: [
         {
-          code: error.code ?? "unsupported-joint",
-          message: error.message,
-          path: "construction",
+          field: "joint",
+          code: cause.code ?? "UNSUPPORTED_JOINT",
+          message: cause.message || "This joint type is not supported.",
         },
       ],
     };
@@ -35,11 +30,16 @@ export function buildBoxGeometry(box) {
       width: box.width,
       depth: box.depth,
       height: box.height,
-      mode: box.dimensionMode,
     },
+    dimensionMode: box.dimensionMode,
     material: box.material,
     joint,
   });
+
+  if (!dimensions.valid) {
+    return { ok: false, issues: dimensions.errors };
+  }
+
   const panels = createBoxPanels(dimensions, joint);
   const layout = layoutPanels(panels);
 
@@ -48,7 +48,7 @@ export function buildBoxGeometry(box) {
     issues: [],
     geometry: {
       dimensions,
-      jointType: joint.type,
+      jointType: box.construction,
       panels,
       layout,
     },
@@ -56,9 +56,8 @@ export function buildBoxGeometry(box) {
 }
 
 /**
- * Reads the envelopes back from a built geometry.
- * Today it returns the Dimension Engine result. When panels carry a real
- * construction, this function should measure them instead.
+ * Reads the envelopes produced by the Dimension Engine.
+ * A later geometry step can measure panels instead of returning this object.
  */
 export function measureEnvelope(geometry) {
   return {

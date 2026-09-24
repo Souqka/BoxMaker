@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Fanera Brains — каркас конструктора</title>
+    <title>Fanera Brains — размеры коробки</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
@@ -12,7 +12,7 @@
         <p class="eyebrow">Fanera Brains</p>
         <h1>Конструктор коробок</h1>
       </div>
-      <p>Проверка каркаса. Размеры в миллиметрах. Соединение паз + шип ещё без геометрии шипов.</p>
+      <p>Размеры в миллиметрах. Паз + шип учитывается в габаритах. Шипы на деталях ещё не строятся.</p>
     </header>
 
     <main>
@@ -23,20 +23,42 @@
             <label><input type="radio" name="dimensionMode" value="external" checked /> Внешние</label>
             <label><input type="radio" name="dimensionMode" value="internal" /> Внутренние</label>
           </div>
-          <label class="field">Ширина <input name="width" type="number" min="0" step="1" value="300" required /></label>
-          <label class="field">Глубина <input name="depth" type="number" min="0" step="1" value="200" required /></label>
-          <label class="field">Высота <input name="height" type="number" min="0" step="1" value="100" required /></label>
+          <label class="field">Ширина <input name="width" type="number" step="any" value="300" /></label>
+          <label class="field">Глубина <input name="depth" type="number" step="any" value="200" /></label>
+          <label class="field">Высота <input name="height" type="number" step="any" value="100" /></label>
         </fieldset>
         <fieldset>
           <legend>Материал</legend>
-          <label class="field">Толщина <input name="thickness" type="number" min="0" step="0.1" value="4" required /></label>
+          <!-- Presets only. A custom thickness field can be added here later. -->
+          <label class="field">Толщина
+            <select name="thickness">
+              <option value="3">3 мм</option>
+              <option value="4" selected>4 мм</option>
+              <option value="6">6 мм</option>
+            </select>
+          </label>
         </fieldset>
         <button type="submit">Собрать</button>
         <p id="errors" class="errors" hidden></p>
       </form>
 
       <section class="view">
-        <div id="readout" class="readout">Введите размеры и нажмите «Собрать».</div>
+        <div id="readout" class="readout">Считаем размеры…</div>
+        <aside id="dimension-debug" class="debug" hidden>
+          <h2>Dimension debug</h2>
+          <dl>
+            <dt>Input dimensions</dt>
+            <dd data-debug="input"></dd>
+            <dt>Dimension mode</dt>
+            <dd data-debug="mode"></dd>
+            <dt>Material thickness</dt>
+            <dd data-debug="thickness"></dd>
+            <dt>Resolved external dimensions</dt>
+            <dd data-debug="external"></dd>
+            <dt>Resolved internal dimensions</dt>
+            <dd data-debug="internal"></dd>
+          </dl>
+        </aside>
         <div id="sheet" class="sheet"></div>
       </section>
     </main>

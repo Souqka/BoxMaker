@@ -52,53 +52,59 @@ test("validation reports non-positive sizes and bad kerf or clearance", () => {
     height: 100,
     material: { thickness: 0, kerf: -1, clearance: -0.2 },
   });
-  const codes = validateBox(box).map((issue) => issue.code);
-  assert.ok(codes.includes("not-positive"));
-  assert.ok(codes.includes("kerf-negative"));
-  assert.ok(codes.includes("clearance-negative"));
+  const issues = validateBox(box);
+  const fields = issues.map((issue) => issue.field);
+  assert.ok(fields.includes("width"));
+  assert.ok(fields.includes("depth"));
+  assert.ok(fields.includes("thickness"));
+  assert.ok(fields.includes("kerf"));
+  assert.ok(fields.includes("clearance"));
+  assert.ok(issues.every((issue) => issue.code === "INVALID_VALUE" && issue.message));
   assert.equal(buildBoxGeometry(box).ok, false);
 });
 
 test("validation rejects an unknown dimension mode", () => {
   const box = sampleBox({ dimensionMode: "outside" });
-  assert.equal(validateBox(box).some((issue) => issue.code === "invalid-dimension-mode"), true);
+  assert.equal(validateBox(box).some((issue) => issue.code === "INVALID_MODE"), true);
 });
 
-test("resolveDimensions asks the joint for the opposite envelope", () => {
+test("resolveDimensions asks the joint for the size adjustment", () => {
   const material = createMaterial({ thickness: 4, kerf: 0, clearance: 0 });
   const joint = {
-    type: "tab-slot",
-    envelopeIsProvisional: false,
-    projectOppositeEnvelope() {
+    type: "custom",
+    getDimensionAdjustment() {
       return { width: 10, depth: 20, height: 30 };
     },
   };
   const external = resolveDimensions({
-    dimensions: { width: 300, depth: 200, height: 100, mode: "external" },
+    dimensions: { width: 300, depth: 200, height: 100 },
+    dimensionMode: "external",
     material,
     joint,
   });
   assert.deepEqual(external.external, { width: 300, depth: 200, height: 100 });
-  assert.deepEqual(external.internal, { width: 10, depth: 20, height: 30 });
+  assert.deepEqual(external.internal, { width: 290, depth: 180, height: 70 });
 
   const internal = resolveDimensions({
-    dimensions: { width: 300, depth: 200, height: 100, mode: "internal" },
+    dimensions: { width: 300, depth: 200, height: 100 },
+    dimensionMode: "internal",
     material,
     joint,
   });
   assert.deepEqual(internal.internal, { width: 300, depth: 200, height: 100 });
-  assert.deepEqual(internal.external, { width: 10, depth: 20, height: 30 });
+  assert.deepEqual(internal.external, { width: 310, depth: 220, height: 130 });
 });
 
-test("the tab-slot joint does not invent an envelope offset yet", () => {
+test("tab-slot reports an adjustment and still has no tab geometry", () => {
   const joint = createJoint({ type: "tab-slot" });
   const resolved = resolveDimensions({
-    dimensions: { width: 300, depth: 200, height: 100, mode: "external" },
+    dimensions: { width: 300, depth: 200, height: 100 },
+    dimensionMode: "external",
     material: createMaterial({ thickness: 6, kerf: 0, clearance: 0 }),
     joint,
   });
-  assert.equal(resolved.provisional, true);
-  assert.deepEqual(resolved.external, resolved.internal);
+  assert.equal(resolved.valid, true);
+  assert.deepEqual(resolved.internal, { width: 288, depth: 188, height: 88 });
   assert.deepEqual(joint.featuresForEdge({ panelId: "front" }), { tabs: [], slots: [] });
 });
 
@@ -192,5 +198,5 @@ test("selection stores a panel id", () => {
 test("an unknown joint is rejected before panels are built", () => {
   const built = buildBoxGeometry(sampleBox({ construction: "finger-joint" }));
   assert.equal(built.ok, false);
-  assert.equal(built.issues[0].code, "unsupported-joint");
+  assert.equal(built.issues[0].code, "UNSUPPORTED_JOINT");
 });
