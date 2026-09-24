@@ -1,0 +1,16 @@
+{
+  "name": "fanera-brains",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Parametric plywood box constructor. Geometry core is independent of the UI.",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "test": "npm run test -w @fanera/core",
+    "dev": "npm run dev -w @fanera/web",
+    "build": "npm run build -w @fanera/web",
+    "typecheck": "npm run typecheck -w @fanera/core && npm run typecheck -w @fanera/web"
+  }
+}
