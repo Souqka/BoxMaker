@@ -47,7 +47,7 @@ export function renderBoxToSvg(geometry) {
   }
 
   return [
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${fmt(layout.width)} ${fmt(layout.height)}" width="100%" height="100%" data-units="mm" role="img" aria-label="Развёртка панелей">`,
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${fmt(layout.width)} ${fmt(layout.height)}" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" data-units="mm" role="img" aria-label="Развёртка панелей">`,
     `<g id="constructionLayer">${construction.join("")}</g>`,
     `<g id="cutLayer">${cut.join("")}</g>`,
     `<g id="engravingLayer">${engraving.join("")}</g>`,

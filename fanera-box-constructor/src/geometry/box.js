@@ -1,15 +1,11 @@
 import { resolveDimensions } from "./dimensions.js";
+import { generateBoxGeometry } from "./generate.js";
 import { createJoint } from "./joints.js";
-import { layoutPanels } from "./layout.js";
 import { PANEL_LIMITS } from "./panelLimits.js";
-import { createBoxPanels } from "./panels.js";
 
 /**
- * User parameters → Dimension Engine → placeholder panels → sheet layout.
- * The result is the handoff for Geometry Engine: both envelopes, material,
- * construction, the 700 × 500 panel limit, and the standard layout.
- * validatePanelSize is not applied here. Placeholder rectangles are not
- * finished parts, and the limit is not a check of the box width.
+ * User parameters → Dimension Engine → Geometry Engine → layout.
+ * The page calls this. Geometry itself never reads the DOM.
  */
 export function buildBoxGeometry(box) {
   let joint;
@@ -43,8 +39,19 @@ export function buildBoxGeometry(box) {
     return { ok: false, issues: dimensions.errors };
   }
 
-  const panels = createBoxPanels(dimensions, joint);
-  const layout = layoutPanels(panels);
+  const generated = generateBoxGeometry({
+    dimensions: {
+      external: dimensions.external,
+      internal: dimensions.internal,
+    },
+    material: dimensions.material,
+    joint,
+    layout: { gap: box.layoutGap ?? 10 },
+  });
+
+  if (!generated.validation.valid) {
+    return { ok: false, issues: generated.validation.errors };
+  }
 
   return {
     ok: true,
@@ -55,8 +62,10 @@ export function buildBoxGeometry(box) {
       construction: box.construction,
       jointType: box.construction,
       panelLimits: { ...PANEL_LIMITS },
-      panels,
-      layout,
+      box: generated.box,
+      panels: generated.panels,
+      layout: generated.layout,
+      validation: generated.validation,
     },
   };
 }

@@ -94,7 +94,7 @@ test("resolveDimensions asks the joint for the size adjustment", () => {
   assert.deepEqual(internal.external, { width: 310, depth: 220, height: 130 });
 });
 
-test("tab-slot reports an adjustment and still has no tab geometry", () => {
+test("tab-slot reports an adjustment and plans fingers from the span", () => {
   const joint = createJoint({ type: "tab-slot" });
   const resolved = resolveDimensions({
     dimensions: { width: 300, depth: 200, height: 100 },
@@ -104,7 +104,11 @@ test("tab-slot reports an adjustment and still has no tab geometry", () => {
   });
   assert.equal(resolved.valid, true);
   assert.deepEqual(resolved.internal, { width: 288, depth: 188, height: 88 });
-  assert.deepEqual(joint.featuresForEdge({ panelId: "front" }), { tabs: [], slots: [] });
+  const plan = joint.planFingers({ span: 80, thickness: 6, clearance: 0 });
+  assert.ok(plan.count >= 3);
+  assert.ok(plan.tabWidth > 0);
+  assert.equal(joint.classifyEdge({ panelId: "bottom", edge: "left" }), "female");
+  assert.equal(joint.classifyEdge({ panelId: "side-1", edge: "bottom" }), "male");
 });
 
 test("external input round-trips onto the external envelope", () => {
@@ -138,9 +142,11 @@ test("builds six placeholder panels without folding", () => {
     BOX_PANEL_IDS,
   );
   const front = built.geometry.panels.find((panel) => panel.id === "front");
-  assert.equal(front.outline.length, 4);
+  assert.ok(front.outline.length > 4);
   assert.equal(front.width, 300);
   assert.equal(front.height, 100);
+  assert.ok(front.tabs.length > 0);
+  assert.ok(front.slots.length > 0);
   assert.deepEqual(built.geometry.panelLimits, { maxWidth: 700, maxHeight: 500, unit: "mm" });
   assert.equal(built.geometry.material.thickness, 4);
   assert.equal(built.geometry.material.kerf, 0.15);

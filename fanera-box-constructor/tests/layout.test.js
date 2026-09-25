@@ -37,6 +37,8 @@ test("panel stock limit treats 700 by 500 and 500 by 700 as the same box", () =>
   assert.equal(tooWide.height, 400);
   assert.equal(tooWide.maxWidth, 700);
   assert.equal(tooWide.maxHeight, 500);
+  assert.deepEqual(tooWide.actual, { width: 701, height: 400 });
+  assert.deepEqual(tooWide.allowed, { width: 700, height: 500 });
 
   const tooTall = validatePanelSize({ id: "back", width: 600, height: 600 });
   assert.equal(tooTall.code, "PANEL_TOO_LARGE");
@@ -58,11 +60,11 @@ test("standard layout places the six panels in millimetres", () => {
     assert.equal(typeof placement.y, "number");
   }
 
-  near(place.bottom.x - (place.front.x + part.front.width), 12);
-  near(place.back.x - (place.bottom.x + part.bottom.width), 12);
-  near(place["side-1"].y - (place.bottom.y + part.bottom.height), 12);
-  near(place.lid.y - (place["side-1"].y + part["side-1"].height), 12);
-  near(place.bottom.y - (place["side-2"].y + part["side-2"].height), 12);
+  near(place.bottom.x - (place.front.x + part.front.width), 10);
+  near(place.back.x - (place.bottom.x + part.bottom.width), 10);
+  near(place["side-1"].y - (place.bottom.y + part.bottom.height), 10);
+  near(place.lid.y - (place["side-1"].y + part["side-1"].height), 10);
+  near(place.bottom.y - (place["side-2"].y + part["side-2"].height), 10);
   near(place.lid.y, Math.max(...layout.placements.map((item) => item.y)));
   near(place["side-2"].y, Math.min(...layout.placements.map((item) => item.y)));
   assert.ok(place.front.x < place.bottom.x);

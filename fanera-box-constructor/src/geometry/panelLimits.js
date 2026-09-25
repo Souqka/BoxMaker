@@ -25,6 +25,8 @@ export function validatePanelSize(panel, limits = PANEL_LIMITS) {
     height,
     maxWidth: limits.maxWidth,
     maxHeight: limits.maxHeight,
+    actual: { width, height },
+    allowed: { width: limits.maxWidth, height: limits.maxHeight },
     code: "PANEL_TOO_LARGE",
     message: `Panel ${panelId} exceeds ${limits.maxWidth} × ${limits.maxHeight} mm.`,
   };
