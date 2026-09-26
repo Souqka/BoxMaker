@@ -1,21 +1,24 @@
 /**
  * Layout Model. Millimetres, y-up. This is where a panel sits on the sheet,
- * not the shape of the panel. Geometry owns outline, tabs, slots, cutouts
- * and engraving. A later scheme can replace "standard" without changing
- * the renderer or the panel model.
+ * not the shape of the panel.
  *
- * Standard scheme, logical preview rather than the production joint order:
+ * The standard scheme is a net. Panels that share a fold are placed on that
+ * edge, and the two edges have the same length:
  *
- *              lid
- *               |
- *            side-1
- *               |
- *     front — bottom — back
- *               |
- *            side-2
+ *                 lid          same width and depth as the bottom
+ *                  |           shared edge = bottom width
+ *                 back         width × height
+ *                  |
+ *   side-1 — bottom — side-2   sides turned so their depth edge
+ *                  |           meets the bottom's depth edge
+ *                front         width × height
+ *
+ * Bottom and lid keep width across and depth up. Front and back meet the
+ * width edges. side-1 and side-2 meet the depth edges, so they are rotated
+ * a quarter turn. The lid is turned 180° so its back edge faces the back panel.
  *
  * x and y are the bottom-left of the unrotated part. rotation is degrees
- * counter-clockwise around the part centre. The standard scheme uses 0.
+ * counter-clockwise around the part centre.
  */
 export function layoutPanels(panels, { gap = 12, margin = 10 } = {}) {
   const byId = new Map(panels.map((panel) => [panel.id, panel]));
@@ -29,11 +32,11 @@ export function layoutPanels(panels, { gap = 12, margin = 10 } = {}) {
   let maxX = -Infinity;
   let maxY = -Infinity;
   for (const placement of raw) {
-    const panel = byId.get(placement.panelId);
-    minX = Math.min(minX, placement.x);
-    minY = Math.min(minY, placement.y);
-    maxX = Math.max(maxX, placement.x + panel.width);
-    maxY = Math.max(maxY, placement.y + panel.height);
+    const footprint = placementFootprint(byId.get(placement.panelId), placement);
+    minX = Math.min(minX, footprint.x);
+    minY = Math.min(minY, footprint.y);
+    maxX = Math.max(maxX, footprint.x + footprint.width);
+    maxY = Math.max(maxY, footprint.y + footprint.height);
   }
 
   const shiftX = margin - minX;
@@ -52,6 +55,20 @@ export function layoutPanels(panels, { gap = 12, margin = 10 } = {}) {
   };
 }
 
+/**
+ * Axis-aligned box of a placed panel, after its layout rotation.
+ * Width and height here are the size on the sheet, not the unrotated part.
+ */
+export function placementFootprint(panel, placement) {
+  const bounds = rotatedBounds(panel.width, panel.height, placement.rotation ?? 0);
+  return {
+    x: placement.x + bounds.minX,
+    y: placement.y + bounds.minY,
+    width: bounds.width,
+    height: bounds.height,
+  };
+}
+
 function standardPositions(byId, gap) {
   const bottom = byId.get("bottom");
   const front = byId.get("front");
@@ -63,26 +80,44 @@ function standardPositions(byId, gap) {
   const bottomHeight = bottom?.height ?? 0;
   const positions = [];
 
-  if (bottom) positions.push(placement("bottom", 0, 0));
-  if (front) {
-    positions.push(placement("front", -gap - front.width, (bottomHeight - front.height) / 2));
-  }
-  if (back) {
-    positions.push(placement("back", bottomWidth + gap, (bottomHeight - back.height) / 2));
-  }
+  if (bottom) positions.push(place("bottom", 0, 0, 0, bottom));
+  if (front) positions.push(place("front", 0, -gap - front.height, 0, front));
+  if (back) positions.push(place("back", 0, bottomHeight + gap, 0, back));
   if (side1) {
-    positions.push(placement("side-1", (bottomWidth - side1.width) / 2, bottomHeight + gap));
+    const footprint = rotatedBounds(side1.width, side1.height, 90);
+    positions.push(place("side-1", -gap - footprint.width, 0, 90, side1));
   }
   if (lid) {
-    const belowLid = side1 ? bottomHeight + gap + side1.height + gap : bottomHeight + gap;
-    positions.push(placement("lid", (bottomWidth - lid.width) / 2, belowLid));
+    const backHeight = back?.height ?? 0;
+    const belowLid = back ? bottomHeight + gap + backHeight + gap : bottomHeight + gap;
+    positions.push(place("lid", 0, belowLid, 180, lid));
   }
   if (side2) {
-    positions.push(placement("side-2", (bottomWidth - side2.width) / 2, -gap - side2.height));
+    const footprint = rotatedBounds(side2.width, side2.height, -90);
+    positions.push(place("side-2", bottomWidth + gap, 0, -90, side2));
   }
   return positions;
 }
 
-function placement(panelId, x, y) {
-  return { panelId, x, y, rotation: 0 };
+function place(panelId, visualX, visualY, rotation, panel) {
+  const bounds = rotatedBounds(panel.width, panel.height, rotation);
+  return {
+    panelId,
+    x: visualX - bounds.minX,
+    y: visualY - bounds.minY,
+    rotation,
+  };
+}
+
+function rotatedBounds(width, height, rotation) {
+  const turn = ((rotation % 360) + 360) % 360;
+  if (turn === 90 || turn === 270) {
+    return {
+      minX: (width - height) / 2,
+      minY: (height - width) / 2,
+      width: height,
+      height: width,
+    };
+  }
+  return { minX: 0, minY: 0, width, height };
 }

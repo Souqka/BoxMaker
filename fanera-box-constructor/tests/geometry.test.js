@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { resolveDimensions, normalizeDimensions } from "../src/geometry/dimensions.js";
 import { generateBoxGeometry } from "../src/geometry/generate.js";
+import { placementFootprint } from "../src/geometry/layout.js";
 import { outlineProblems } from "../src/geometry/primitives.js";
 import { renderBoxToSvg } from "../src/renderers/svg.js";
 import { buildBoxGeometry } from "../src/geometry/box.js";
@@ -76,18 +77,25 @@ function placementMap(layout) {
 function assertCross(result, gap) {
   const place = placementMap(result.layout);
   const part = Object.fromEntries(result.panels.map((panel) => [panel.id, panel]));
+  const foot = Object.fromEntries(
+    result.layout.placements.map((item) => [item.panelId, placementFootprint(part[item.panelId], item)]),
+  );
   assert.equal(result.layout.scheme, "standard");
   assert.equal(result.layout.unit, "mm");
   assert.equal(result.layout.gap, gap);
-  near(place.bottom.x - (place.front.x + part.front.width), gap);
-  near(place.back.x - (place.bottom.x + part.bottom.width), gap);
-  near(place["side-1"].y - (place.bottom.y + part.bottom.height), gap);
-  near(place.lid.y - (place["side-1"].y + part["side-1"].height), gap);
-  near(place.bottom.y - (place["side-2"].y + part["side-2"].height), gap);
-  assert.ok(place.front.x < place.bottom.x && place.bottom.x < place.back.x);
-  assert.ok(place["side-2"].y < place.bottom.y && place.bottom.y < place["side-1"].y);
-  assert.ok(place["side-1"].y < place.lid.y);
-  for (const item of result.layout.placements) assert.equal(item.rotation, 0);
+  near(part.lid.width, part.bottom.width);
+  near(part.lid.height, part.bottom.height);
+  near(foot.bottom.y - (foot.front.y + foot.front.height), gap);
+  near(foot.front.width, foot.bottom.width);
+  near(foot.back.y - (foot.bottom.y + foot.bottom.height), gap);
+  near(foot.back.width, foot.bottom.width);
+  near(foot.lid.y - (foot.back.y + foot.back.height), gap);
+  near(foot.lid.width, foot.back.width);
+  near(foot.bottom.x - (foot["side-1"].x + foot["side-1"].width), gap);
+  near(foot["side-1"].height, foot.bottom.height);
+  near(foot["side-1"].y, foot.bottom.y);
+  near(foot["side-2"].x - (foot.bottom.x + foot.bottom.width), gap);
+  near(foot["side-2"].height, foot.bottom.height);
 }
 
 test("300 × 200 × 100 at 4 mm keeps real face proportions and a uniform scale", () => {
@@ -124,15 +132,15 @@ test("300 × 200 × 100 at 4 mm keeps real face proportions and a uniform scale"
   assert.deepEqual(
     result.layout.placements.map((item) => [item.panelId, item.x, item.y, item.rotation]),
     [
-      ["bottom", 320, 120, 0],
-      ["front", 10, 170, 0],
-      ["back", 630, 170, 0],
-      ["side-1", 370, 330, 0],
-      ["lid", 320, 440, 0],
-      ["side-2", 370, 10, 0],
+      ["bottom", 120, 120, 0],
+      ["front", 120, 10, 0],
+      ["back", 120, 330, 0],
+      ["side-1", -40, 170, 90],
+      ["lid", 120, 440, 180],
+      ["side-2", 380, 170, -90],
     ],
   );
-  near(result.layout.width, 940);
+  near(result.layout.width, 540);
   near(result.layout.height, 650);
 });
 
@@ -277,11 +285,12 @@ test("the sheet uses one scale in millimetre user units", () => {
     }),
   );
   const svg = renderBoxToSvg(built.geometry);
-  assert.match(svg, /viewBox="0 0 940 650"/);
+  assert.match(svg, /viewBox="0 0 540 650"/);
   assert.match(svg, /preserveAspectRatio="xMidYMid meet"/);
   assert.doesNotMatch(svg, /preserveAspectRatio="none"/);
   assert.doesNotMatch(svg, /scale\(/);
 
+  const placed = Object.fromEntries(built.geometry.layout.placements.map((item) => [item.panelId, item]));
   for (const panel of built.geometry.panels) {
     const chunk = svg.split(`data-panel="${panel.id}"`)[1];
     const path = chunk.match(/d="([^"]+)"/)[1];
@@ -296,7 +305,10 @@ test("the sheet uses one scale in millimetre user units", () => {
       minY = Math.min(minY, numbers[index + 1]);
       maxY = Math.max(maxY, numbers[index + 1]);
     }
-    near(maxX - minX, panel.width, 1e-3);
-    near(maxY - minY, panel.height, 1e-3);
+    const turn = Math.abs((placed[panel.id].rotation ?? 0) % 180);
+    const spanX = turn === 90 ? panel.height : panel.width;
+    const spanY = turn === 90 ? panel.width : panel.height;
+    near(maxX - minX, spanX, 1e-3);
+    near(maxY - minY, spanY, 1e-3);
   }
 });

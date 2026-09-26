@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { buildBoxGeometry } from "../src/geometry/box.js";
-import { layoutPanels } from "../src/geometry/layout.js";
+import { layoutPanels, placementFootprint } from "../src/geometry/layout.js";
 import { PANEL_LIMITS, validatePanelSize } from "../src/geometry/panelLimits.js";
 import { BOX_PANEL_IDS } from "../src/geometry/panels.js";
 import { createBox } from "../src/models/BoxModel.js";
@@ -45,35 +45,40 @@ test("panel stock limit treats 700 by 500 and 500 by 700 as the same box", () =>
   assert.equal(tooTall.panelId, "back");
 });
 
-test("standard layout places the six panels in millimetres", () => {
+test("standard layout is a net with equal adjoining edges", () => {
   const built = buildBoxGeometry(box());
   const { layout, panels } = built.geometry;
   const place = Object.fromEntries(layout.placements.map((item) => [item.panelId, item]));
   const part = Object.fromEntries(panels.map((panel) => [panel.id, panel]));
+  const foot = Object.fromEntries(
+    layout.placements.map((item) => [item.panelId, placementFootprint(part[item.panelId], item)]),
+  );
 
   assert.equal(layout.scheme, "standard");
   assert.equal(layout.unit, "mm");
   assert.deepEqual(Object.keys(place).sort(), [...BOX_PANEL_IDS].sort());
-  for (const placement of layout.placements) {
-    assert.equal(placement.rotation, 0);
-    assert.equal(typeof placement.x, "number");
-    assert.equal(typeof placement.y, "number");
-  }
+  near(part.lid.width, part.bottom.width);
+  near(part.lid.height, part.bottom.height);
+  near(part.front.width, part.bottom.width);
+  near(part.back.width, part.bottom.width);
+  near(part["side-1"].width, part.bottom.height);
+  near(part["side-2"].width, part.bottom.height);
 
-  near(place.bottom.x - (place.front.x + part.front.width), 10);
-  near(place.back.x - (place.bottom.x + part.bottom.width), 10);
-  near(place["side-1"].y - (place.bottom.y + part.bottom.height), 10);
-  near(place.lid.y - (place["side-1"].y + part["side-1"].height), 10);
-  near(place.bottom.y - (place["side-2"].y + part["side-2"].height), 10);
-  near(place.lid.y, Math.max(...layout.placements.map((item) => item.y)));
-  near(place["side-2"].y, Math.min(...layout.placements.map((item) => item.y)));
-  assert.ok(place.front.x < place.bottom.x);
-  assert.ok(place.bottom.x < place.back.x);
-
-  const bottomCenter = place.bottom.x + part.bottom.width / 2;
-  near(place.lid.x + part.lid.width / 2, bottomCenter);
-  near(place["side-1"].x + part["side-1"].width / 2, bottomCenter);
-  near(place["side-2"].x + part["side-2"].width / 2, bottomCenter);
+  near(foot.bottom.y - (foot.front.y + foot.front.height), 10);
+  near(foot.front.width, foot.bottom.width);
+  near(foot.front.x, foot.bottom.x);
+  near(foot.back.y - (foot.bottom.y + foot.bottom.height), 10);
+  near(foot.back.width, foot.bottom.width);
+  near(foot.lid.y - (foot.back.y + foot.back.height), 10);
+  near(foot.lid.width, foot.back.width);
+  near(foot.bottom.x - (foot["side-1"].x + foot["side-1"].width), 10);
+  near(foot["side-1"].height, foot.bottom.height);
+  near(foot["side-1"].y, foot.bottom.y);
+  near(foot["side-2"].x - (foot.bottom.x + foot.bottom.width), 10);
+  near(foot["side-2"].height, foot.bottom.height);
+  assert.equal(place.lid.rotation, 180);
+  assert.equal(place["side-1"].rotation, 90);
+  assert.equal(place["side-2"].rotation, -90);
 });
 
 test("the svg renderer draws the layout coordinates and not a fixed row", () => {
