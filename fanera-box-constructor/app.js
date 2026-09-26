@@ -1,6 +1,6 @@
 import { buildBoxGeometry } from "./src/geometry/box.js";
 import { createBox } from "./src/models/BoxModel.js";
-import { renderBoxToSvg } from "./src/renderers/svg.js";
+import { createSheetView } from "./src/renderers/sheetView.js";
 
 /**
  * Temporary development readout. Remove this element from the page,
@@ -13,6 +13,16 @@ const errors = document.querySelector("#errors");
 const readout = document.querySelector("#readout");
 const sheet = document.querySelector("#sheet");
 const debug = document.querySelector("#dimension-debug");
+const selectionReadout = document.querySelector("#selection-readout");
+const view = createSheetView(sheet, {
+  onSelect(panelId) {
+    selectionReadout.textContent = panelId ? `Выбрана: ${panelId}` : "Панель не выбрана";
+  },
+});
+
+document.querySelector("#zoom-in").addEventListener("click", () => view.zoom(1.25));
+document.querySelector("#zoom-out").addEventListener("click", () => view.zoom(1 / 1.25));
+document.querySelector("#zoom-fit").addEventListener("click", () => view.fitToView());
 
 form.addEventListener("input", render);
 form.addEventListener("change", render);
@@ -29,7 +39,8 @@ function render() {
   renderDebug(box, result);
 
   if (!result.ok) {
-    sheet.replaceChildren();
+    view.showIssues(result.issues);
+    selectionReadout.textContent = "Панель не выбрана";
     readout.textContent = "Модель не собрана.";
     errors.hidden = false;
     errors.textContent = result.issues.map((issue) => issue.message).join(" ");
@@ -39,7 +50,8 @@ function render() {
   errors.hidden = true;
   errors.textContent = "";
   readout.replaceChildren(readoutFragment(box, result.geometry));
-  sheet.innerHTML = renderBoxToSvg(result.geometry);
+  view.show(result.geometry);
+  selectionReadout.textContent = "Панель не выбрана";
 }
 
 function readForm(source) {
