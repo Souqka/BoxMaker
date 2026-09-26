@@ -182,10 +182,10 @@ test("creates a logo in panel millimetres and draws it on the engraving layer", 
     panels: built.geometry.panels.map((panel) => (panel.id === "front" ? { ...front, engraving: [rotated] } : panel)),
   };
   const svg = renderBoxToSvg(geometry);
-  assert.match(svg, /id="cutLayer"/);
-  assert.match(svg, /id="engravingLayer"/);
-  assert.match(svg, /id="constructionLayer"/);
-  assert.match(svg, /id="dimensionLayer"/);
+  assert.match(svg, /id="cut-layer"/);
+  assert.match(svg, /id="engraving-layer"/);
+  assert.match(svg, /id="construction-layer"/);
+  assert.match(svg, /id="dimension-layer"/);
   assert.match(svg, /data-units="mm"/);
   assert.match(svg, /data-engraving="logo-1"/);
   assert.match(svg, /data-panel="front"/);

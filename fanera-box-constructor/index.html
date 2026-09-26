@@ -12,7 +12,7 @@
         <p class="eyebrow">Fanera Brains</p>
         <h1>Конструктор коробок</h1>
       </div>
-      <p>Размеры в миллиметрах. Паз + шип учитывается в габаритах. Шипы на деталях ещё не строятся.</p>
+      <p>Размеры в миллиметрах. Развёртка показывает реальные детали: паз и шип входят в контур.</p>
     </header>
 
     <main>
@@ -35,6 +35,7 @@
               <option value="3">3 мм</option>
               <option value="4" selected>4 мм</option>
               <option value="6">6 мм</option>
+              <option value="10">10 мм</option>
             </select>
           </label>
         </fieldset>
@@ -44,6 +45,12 @@
 
       <section class="view">
         <div id="readout" class="readout">Считаем размеры…</div>
+        <div class="sheet-tools">
+          <button type="button" id="zoom-in" aria-label="Увеличить">+</button>
+          <button type="button" id="zoom-out" aria-label="Уменьшить">−</button>
+          <button type="button" id="zoom-fit" aria-label="Вписать">Вписать</button>
+          <span id="selection-readout">Панель не выбрана</span>
+        </div>
         <aside id="dimension-debug" class="debug" hidden>
           <h2>Dimension debug</h2>
           <dl>
