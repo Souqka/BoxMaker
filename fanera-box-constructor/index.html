@@ -51,7 +51,10 @@
           <button type="button" id="zoom-fit" aria-label="Вписать">Вписать</button>
           <button type="button" id="zoom-reset" aria-label="Сбросить вид">Сброс</button>
           <label class="snap"><input type="checkbox" id="snap-toggle" /> Привязка 5 мм</label>
+          <button type="button" id="logo-upload">Загрузить логотип</button>
+          <input id="logo-file" type="file" accept=".svg,.png,.jpg,.jpeg,image/svg+xml,image/png,image/jpeg" hidden />
         </div>
+        <p id="logo-message" class="warning" hidden></p>
         <aside id="inspector" class="inspector" aria-live="polite">
           <h2 id="inspector-title">Деталь</h2>
           <div id="inspector-body">Выберите деталь</div>

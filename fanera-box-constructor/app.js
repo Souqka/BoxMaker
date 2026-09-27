@@ -27,6 +27,24 @@ document.querySelector("#snap-toggle").addEventListener("change", (event) => {
   view.setSnap(event.target.checked, 5);
 });
 
+const logoFile = document.querySelector("#logo-file");
+const logoMessage = document.querySelector("#logo-message");
+document.querySelector("#logo-upload").addEventListener("click", () => {
+  if (!view.logoTargetPanel()) {
+    showLogoMessage("Сначала выберите панель");
+    return;
+  }
+  logoFile.value = "";
+  logoFile.click();
+});
+logoFile.addEventListener("change", async () => {
+  const file = logoFile.files?.[0];
+  if (!file) return;
+  const result = await view.loadLogoFile(file);
+  if (!result.ok) showLogoMessage(result.message);
+  else showLogoMessage("");
+});
+
 form.addEventListener("input", render);
 form.addEventListener("change", render);
 form.addEventListener("submit", (event) => {
@@ -64,13 +82,22 @@ function renderInspector(snapshot) {
   }
   const info = snapshot.info;
   inspectorTitle.textContent = info.title;
-  const rows = [
-    ["Ширина", `${trim(info.width)} мм`],
-    ["Высота", `${trim(info.height)} мм`],
-    ["X", `${trim(info.x)} мм`],
-    ["Y", `${trim(info.y)} мм`],
-    ["Поворот", `${trim(info.rotation)}°`],
-  ];
+  const local = info.type === "engraving";
+  const rows = local
+    ? [
+        ["X", `${trim(info.x)} мм`],
+        ["Y", `${trim(info.y)} мм`],
+        ["Ширина", `${trim(info.width)} мм`],
+        ["Высота", `${trim(info.height)} мм`],
+        ["Поворот", `${trim(info.rotation)}°`],
+      ]
+    : [
+        ["Ширина", `${trim(info.width)} мм`],
+        ["Высота", `${trim(info.height)} мм`],
+        ["X", `${trim(info.x)} мм`],
+        ["Y", `${trim(info.y)} мм`],
+        ["Поворот", `${trim(info.rotation)}°`],
+      ];
   const list = document.createElement("dl");
   for (const [name, value] of rows) {
     const term = document.createElement("dt");
@@ -81,7 +108,9 @@ function renderInspector(snapshot) {
   }
   const note = document.createElement("p");
   note.className = "hint";
-  note.textContent = "X вправо, Y вверх, миллиметры листа. Ширина и высота без поворота.";
+  note.textContent = local
+    ? "X вправо, Y вверх, миллиметры панели."
+    : "X вправо, Y вверх, миллиметры листа. Ширина и высота без поворота.";
   inspectorBody.replaceChildren(list, note);
   for (const message of snapshot.warnings?.messages ?? []) {
     const warning = document.createElement("p");
@@ -143,6 +172,12 @@ function formatSize(size) {
 function formatMm(value) {
   if (!Number.isFinite(value)) return "—";
   return `${trim(value)} мм`;
+}
+
+function showLogoMessage(text) {
+  if (!logoMessage) return;
+  logoMessage.hidden = !text;
+  logoMessage.textContent = text;
 }
 
 function trim(value) {

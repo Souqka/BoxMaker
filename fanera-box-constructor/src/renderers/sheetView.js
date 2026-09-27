@@ -3,10 +3,12 @@
  * Panel outlines stay on the geometry object and are not written here.
  */
 import { screenToWorld } from "../editor/coordinates.js";
+import { attachEngravings } from "../editor/logo.js";
 import {
   applyShortcut,
   createEditorState,
   createHistory,
+  describeEngraving,
   describePanel,
   draggedPlacement,
   geometryFingerprint,
@@ -19,6 +21,7 @@ import {
   visibleGridStep,
   zoomAround,
 } from "../editor/scene.js";
+import { ENGRAVING_LIMITS, readLogoFile } from "../editor/upload.js";
 import { renderSvg } from "./svg.js";
 import {
   fitLayoutToViewport,
@@ -27,7 +30,13 @@ import {
 
 const DRAG_THRESHOLD = 4;
 
-export function createSheetView(container, { onSelect, onChange, minZoom = 0.1, maxZoom = 20 } = {}) {
+export function createSheetView(container, {
+  onSelect,
+  onChange,
+  minZoom = 0.1,
+  maxZoom = 20,
+  engravingLimits = ENGRAVING_LIMITS,
+} = {}) {
   const editor = createEditorState({ minZoom, maxZoom });
   const history = createHistory();
   let geometry = null;
@@ -37,6 +46,8 @@ export function createSheetView(container, { onSelect, onChange, minZoom = 0.1, 
   let referenceWidth = null;
   let spaceDown = false;
   let drag = null;
+  let engravings = [];
+  let engravingSerial = 1;
 
   container.addEventListener("wheel", onWheel, { passive: false });
   container.addEventListener("pointerdown", onPointerDown);
@@ -174,14 +185,16 @@ export function createSheetView(container, { onSelect, onChange, minZoom = 0.1, 
       return;
     }
     const size = containerSize();
+    const selection = editor.selection;
     container.innerHTML = renderSvg({
-      panels: geometry.panels,
+      panels: attachEngravings(geometry.panels, engravings),
       layout,
       viewport: view,
       options: {
         grid: true,
         gridStep: view ? visibleGridStep(view, size.width, { screenHeight: size.height }) : 10,
-        selectedPanelId: editor.selection?.id ?? null,
+        selectedPanelId: selection?.type === "panel" ? selection.id : null,
+        selectedEngravingId: selection?.type === "engraving" ? selection.id : null,
         hoveredPanelId: editor.hoveredPanelId,
       },
     });
@@ -189,7 +202,6 @@ export function createSheetView(container, { onSelect, onChange, minZoom = 0.1, 
   }
 
   function publish() {
-    const selected = findPanel(editor.selection?.id);
     onChange?.({
       selection: editor.selection,
       hoveredPanelId: editor.hoveredPanelId,
@@ -197,10 +209,55 @@ export function createSheetView(container, { onSelect, onChange, minZoom = 0.1, 
       interaction: editor.interaction,
       snap: editor.snap,
       warnings: geometry && layout ? layoutWarnings(geometry.panels, layout) : { overlap: false, tight: false, messages: [] },
-      info: selected ? describePanel(selected.panel, selected.placement) : null,
+      info: selectionInfo(),
       invalid: !geometry,
       issues,
     });
+  }
+
+  function selectionInfo() {
+    const selection = editor.selection;
+    if (selection?.type === "engraving") {
+      const engraving = engravings.find((item) => item.id === selection.id);
+      return engraving ? describeEngraving(engraving) : null;
+    }
+    if (selection?.type === "panel") {
+      const selected = findPanel(selection.id);
+      return selected ? describePanel(selected.panel, selected.placement) : null;
+    }
+    return null;
+  }
+
+  function selectedPanel() {
+    const selection = editor.selection;
+    if (!geometry || !selection) return null;
+    if (selection.type === "panel") return geometry.panels.find((panel) => panel.id === selection.id) ?? null;
+    if (selection.type === "engraving") {
+      const engraving = engravings.find((item) => item.id === selection.id);
+      return geometry.panels.find((panel) => panel.id === engraving?.panelId) ?? null;
+    }
+    return null;
+  }
+
+  async function loadLogoFile(file) {
+    const panel = selectedPanel();
+    if (!panel) return { ok: false, message: "Сначала выберите панель" };
+    const before = geometryFingerprint(geometry.panels);
+    const result = await readLogoFile(file, {
+      panel,
+      id: `engraving-${engravingSerial}`,
+      limits: engravingLimits,
+    });
+    if (!result.ok) return result;
+    engravingSerial += 1;
+    engravings = [...engravings, result.engraving];
+    editor.selectEngraving(result.engraving.id);
+    if (geometryFingerprint(geometry.panels) !== before) {
+      engravings = engravings.filter((item) => item.id !== result.engraving.id);
+      return { ok: false, message: "Гравировка не должна менять геометрию." };
+    }
+    draw();
+    return result;
   }
 
   function onWheel(event) {
@@ -430,6 +487,13 @@ export function createSheetView(container, { onSelect, onChange, minZoom = 0.1, 
     redo,
     getPanelBounds: boundsFor,
     geometryHash,
+    getEngravings() {
+      return engravings.map((item) => ({ ...item }));
+    },
+    logoTargetPanel() {
+      return selectedPanel()?.id ?? null;
+    },
+    loadLogoFile,
     destroy,
   };
 }
