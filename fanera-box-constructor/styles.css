@@ -107,6 +107,7 @@ button {
 
 .sheet-tools {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.4rem;
   margin-bottom: 0.5rem;
@@ -118,11 +119,46 @@ button {
   padding: 0.3rem 0.55rem;
 }
 
-.sheet-tools span {
+.sheet-tools .snap {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
   margin-left: auto;
-  color: #6d645a;
+  color: #4e463e;
   font-size: 0.85rem;
 }
+
+.inspector {
+  margin: 0 0 0.55rem;
+  padding: 0.55rem 0.7rem;
+  background: #fffdf8;
+  border: 1px solid #e4d9c8;
+  border-radius: 8px;
+}
+
+.inspector h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+}
+
+.inspector dl {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  gap: 0.12rem 0.6rem;
+  margin: 0;
+}
+
+.inspector dt { color: #6d645a; }
+.inspector dd { margin: 0; }
+
+.inspector .warning,
+.hint {
+  margin: 0.45rem 0 0;
+  color: #6d645a;
+  font-size: 0.82rem;
+}
+
+.inspector .warning { color: #8a2e22; }
 
 .sheet {
   height: 70vh;
@@ -144,12 +180,18 @@ button {
   cursor: pointer;
 }
 
-.sheet [data-panel-id]:hover path {
+.sheet [data-hovered="true"]:not([data-selected="true"]) path,
+.sheet [data-panel-id]:hover:not([data-selected="true"]) path {
   stroke: #0f6f8c;
 }
 
 .sheet [data-selected="true"] path {
   stroke: #7a3b2e;
+}
+
+.sheet.is-panning,
+.sheet.is-dragging {
+  cursor: grabbing;
 }
 
 .debug {

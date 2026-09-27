@@ -109,6 +109,25 @@ function place(panelId, visualX, visualY, rotation, panel) {
   };
 }
 
+/**
+ * Panel-local point after layout rotation. Rotation is around the part
+ * centre, counter-clockwise, in degrees. The returned point is a copy.
+ */
+export function rotateLocalPoint(point, rotation, width, height) {
+  if (!rotation) return { x: point.x, y: point.y };
+  const centerX = width / 2;
+  const centerY = height / 2;
+  const radians = (rotation * Math.PI) / 180;
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+  const dx = point.x - centerX;
+  const dy = point.y - centerY;
+  return {
+    x: centerX + dx * cos - dy * sin,
+    y: centerY + dx * sin + dy * cos,
+  };
+}
+
 function rotatedBounds(width, height, rotation) {
   const turn = ((rotation % 360) + 360) % 360;
   if (turn === 90 || turn === 270) {
