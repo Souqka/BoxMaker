@@ -6,7 +6,7 @@
  * 1 geometry unit = 1 mm. The viewBox is the sheet window. CSS may scale
  * that window, and preserveAspectRatio keeps one scale for both axes.
  */
-import { placementFootprint } from "../geometry/layout.js";
+import { placementFootprint, rotateLocalPoint } from "../geometry/layout.js";
 import { calculateLayoutBounds } from "./viewport.js";
 
 const LAYERS = [
@@ -47,11 +47,12 @@ export function renderSvg({ panels = [], layout = {}, viewport, options = {} } =
     const panel = byId.get(placement.panelId);
     if (!panel) continue;
     const selected = options.selectedPanelId === panel.id;
+    const hovered = options.hoveredPanelId === panel.id;
     const outline = Array.isArray(panel.outline) ? panel.outline : [];
     const path = pathFrom(outline, placement, bounds.height, panel);
 
     layers["cut-layer"].push(
-      `<g data-panel-id="${escapeXml(panel.id)}" data-selected="${selected ? "true" : "false"}" data-rotation="${fmt(placement.rotation ?? 0)}" data-panel="${escapeXml(panel.id)}">` +
+      `<g data-panel-id="${escapeXml(panel.id)}" data-selected="${selected ? "true" : "false"}" data-hovered="${hovered ? "true" : "false"}" data-rotation="${fmt(placement.rotation ?? 0)}" data-panel="${escapeXml(panel.id)}">` +
         `<path d="${path}" fill="#fffdf8" stroke="#241e18" stroke-width="1.6" vector-effect="non-scaling-stroke" />` +
         `</g>`,
     );
@@ -86,7 +87,7 @@ export function renderSvg({ panels = [], layout = {}, viewport, options = {} } =
       const footprint = placementFootprint(panel, placement);
       const top = bounds.height - (footprint.y + footprint.height);
       layers["selection-layer"].push(
-        `<rect data-selection="${escapeXml(panel.id)}" x="${fmt(footprint.x)}" y="${fmt(top)}" width="${fmt(footprint.width)}" height="${fmt(footprint.height)}" fill="none" stroke="#7a3b2e" stroke-width="1.8" vector-effect="non-scaling-stroke" pointer-events="none" />`,
+        `<rect data-selection="${escapeXml(panel.id)}" x="${fmt(footprint.x)}" y="${fmt(top)}" width="${fmt(footprint.width)}" height="${fmt(footprint.height)}" fill="rgba(122,59,46,0.14)" stroke="#7a3b2e" stroke-width="1.8" vector-effect="non-scaling-stroke" pointer-events="none" />`,
       );
     }
   }
@@ -150,25 +151,10 @@ function gridLines(view, step) {
 }
 
 function toSheet(point, placement, sheetHeight, panel) {
-  const local = rotateLocal(point, placement.rotation ?? 0, panel.width, panel.height);
+  const local = rotateLocalPoint(point, placement.rotation ?? 0, panel.width, panel.height);
   return {
     x: placement.x + local.x,
     y: sheetHeight - (placement.y + local.y),
-  };
-}
-
-function rotateLocal(point, rotation, width, height) {
-  if (!rotation) return point;
-  const centerX = width / 2;
-  const centerY = height / 2;
-  const radians = (rotation * Math.PI) / 180;
-  const cos = Math.cos(radians);
-  const sin = Math.sin(radians);
-  const dx = point.x - centerX;
-  const dy = point.y - centerY;
-  return {
-    x: centerX + dx * cos - dy * sin,
-    y: centerY + dx * sin + dy * cos,
   };
 }
 
