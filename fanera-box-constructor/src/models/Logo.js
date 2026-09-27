@@ -21,5 +21,6 @@ export function createLogo(input) {
     rotation: input.rotation ?? 0,
     source: input.source,
     data: input.data ?? "",
+    name: input.name ?? "",
   };
 }
