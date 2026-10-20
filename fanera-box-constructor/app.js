@@ -13,16 +13,19 @@ const errors = document.querySelector("#errors");
 const readout = document.querySelector("#readout");
 const sheet = document.querySelector("#sheet");
 const debug = document.querySelector("#dimension-debug");
-const selectionReadout = document.querySelector("#selection-readout");
+const inspectorTitle = document.querySelector("#inspector-title");
+const inspectorBody = document.querySelector("#inspector-body");
 const view = createSheetView(sheet, {
-  onSelect(panelId) {
-    selectionReadout.textContent = panelId ? `Выбрана: ${panelId}` : "Панель не выбрана";
-  },
+  onChange: renderInspector,
 });
 
 document.querySelector("#zoom-in").addEventListener("click", () => view.zoom(1.25));
 document.querySelector("#zoom-out").addEventListener("click", () => view.zoom(1 / 1.25));
 document.querySelector("#zoom-fit").addEventListener("click", () => view.fitToView());
+document.querySelector("#zoom-reset").addEventListener("click", () => view.resetView());
+document.querySelector("#snap-toggle").addEventListener("change", (event) => {
+  view.setSnap(event.target.checked, 5);
+});
 
 form.addEventListener("input", render);
 form.addEventListener("change", render);
@@ -40,7 +43,6 @@ function render() {
 
   if (!result.ok) {
     view.showIssues(result.issues);
-    selectionReadout.textContent = "Панель не выбрана";
     readout.textContent = "Модель не собрана.";
     errors.hidden = false;
     errors.textContent = result.issues.map((issue) => issue.message).join(" ");
@@ -51,7 +53,42 @@ function render() {
   errors.textContent = "";
   readout.replaceChildren(readoutFragment(box, result.geometry));
   view.show(result.geometry);
-  selectionReadout.textContent = "Панель не выбрана";
+}
+
+function renderInspector(snapshot) {
+  if (!inspectorTitle || !inspectorBody) return;
+  if (!snapshot?.info) {
+    inspectorTitle.textContent = "Деталь";
+    inspectorBody.textContent = snapshot?.invalid ? "Модель не собрана." : "Выберите деталь";
+    return;
+  }
+  const info = snapshot.info;
+  inspectorTitle.textContent = info.title;
+  const rows = [
+    ["Ширина", `${trim(info.width)} мм`],
+    ["Высота", `${trim(info.height)} мм`],
+    ["X", `${trim(info.x)} мм`],
+    ["Y", `${trim(info.y)} мм`],
+    ["Поворот", `${trim(info.rotation)}°`],
+  ];
+  const list = document.createElement("dl");
+  for (const [name, value] of rows) {
+    const term = document.createElement("dt");
+    term.textContent = name;
+    const detail = document.createElement("dd");
+    detail.textContent = value;
+    list.append(term, detail);
+  }
+  const note = document.createElement("p");
+  note.className = "hint";
+  note.textContent = "X вправо, Y вверх, миллиметры листа. Ширина и высота без поворота.";
+  inspectorBody.replaceChildren(list, note);
+  for (const message of snapshot.warnings?.messages ?? []) {
+    const warning = document.createElement("p");
+    warning.className = "warning";
+    warning.textContent = message;
+    inspectorBody.append(warning);
+  }
 }
 
 function readForm(source) {

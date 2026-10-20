@@ -49,8 +49,14 @@
           <button type="button" id="zoom-in" aria-label="Увеличить">+</button>
           <button type="button" id="zoom-out" aria-label="Уменьшить">−</button>
           <button type="button" id="zoom-fit" aria-label="Вписать">Вписать</button>
-          <span id="selection-readout">Панель не выбрана</span>
+          <button type="button" id="zoom-reset" aria-label="Сбросить вид">Сброс</button>
+          <label class="snap"><input type="checkbox" id="snap-toggle" /> Привязка 5 мм</label>
         </div>
+        <aside id="inspector" class="inspector" aria-live="polite">
+          <h2 id="inspector-title">Деталь</h2>
+          <div id="inspector-body">Выберите деталь</div>
+        </aside>
+        <p class="hint">Деталь перетаскивается мышью. Пустое поле, средняя кнопка или пробел двигают лист. Колесо масштабирует у курсора. Esc снимает выбор, 0 вписывает лист.</p>
         <aside id="dimension-debug" class="debug" hidden>
           <h2>Dimension debug</h2>
           <dl>
