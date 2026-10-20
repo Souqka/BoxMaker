@@ -48,6 +48,7 @@ export function renderSvg({ panels = [], layout = {}, viewport, options = {} } =
     if (!panel) continue;
     const selected = options.selectedPanelId === panel.id;
     const hovered = options.hoveredPanelId === panel.id;
+    const selectedEngravingId = options.selectedEngravingId ?? null;
     const outline = Array.isArray(panel.outline) ? panel.outline : [];
     const path = pathFrom(outline, placement, bounds.height, panel);
 
@@ -59,11 +60,22 @@ export function renderSvg({ panels = [], layout = {}, viewport, options = {} } =
 
     for (const item of panel.engraving ?? []) {
       const corners = engravingCorners(item).map((point) => toSheet(point, placement, bounds.height, panel));
+      const points = corners.map((point) => `${fmt(point.x)},${fmt(point.y)}`).join(" ");
+      const href = engravingHref(item);
+      const image = href
+        ? `<image href="${escapeXml(href)}" width="${fmt(item.width)}" height="${fmt(item.height)}" transform="${engravingImageTransform(item, placement, bounds.height, panel)}" preserveAspectRatio="xMidYMid meet"/>`
+        : "";
       layers["engraving-layer"].push(
-        `<polygon data-engraving="${escapeXml(item.id)}" points="${corners
-          .map((point) => `${fmt(point.x)},${fmt(point.y)}`)
-          .join(" ")}" fill="rgba(15,111,140,0.12)" stroke="#0f6f8c" stroke-width="0.5" />`,
+        `<g data-engraving="${escapeXml(item.id)}">` +
+          `<polygon points="${points}" fill="rgba(15,111,140,0.08)" stroke="#0f6f8c" stroke-width="0.4" vector-effect="non-scaling-stroke"/>` +
+          image +
+          `</g>`,
       );
+      if (selectedEngravingId === item.id) {
+        layers["selection-layer"].push(
+          `<polygon data-selection="${escapeXml(item.id)}" points="${points}" fill="none" stroke="#7a3b2e" stroke-width="1.4" vector-effect="non-scaling-stroke" pointer-events="none"/>`,
+        );
+      }
     }
 
     const center = toSheet(
@@ -163,6 +175,39 @@ function pathFrom(points, placement, sheetHeight, panel) {
   const mapped = points.map((point) => toSheet(point, placement, sheetHeight, panel));
   const [first, ...rest] = mapped;
   return `M ${fmt(first.x)} ${fmt(first.y)} ${rest.map((point) => `L ${fmt(point.x)} ${fmt(point.y)}`).join(" ")} Z`;
+}
+
+function engravingHref(item) {
+  if (!item.data) return "";
+  if (item.source === "svg" && !String(item.data).startsWith("data:")) {
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(item.data)}`;
+  }
+  return String(item.data);
+}
+
+function engravingImageTransform(item, placement, sheetHeight, panel) {
+  const origin = toSheet(logoPoint(item, 0, item.height), placement, sheetHeight, panel);
+  const alongX = toSheet(logoPoint(item, item.width, item.height), placement, sheetHeight, panel);
+  const alongY = toSheet(logoPoint(item, 0, 0), placement, sheetHeight, panel);
+  const a = (alongX.x - origin.x) / item.width;
+  const b = (alongX.y - origin.y) / item.width;
+  const c = (alongY.x - origin.x) / item.height;
+  const d = (alongY.y - origin.y) / item.height;
+  return `matrix(${fmt(a)} ${fmt(b)} ${fmt(c)} ${fmt(d)} ${fmt(origin.x)} ${fmt(origin.y)})`;
+}
+
+function logoPoint(item, localX, localY) {
+  const centerX = item.width / 2;
+  const centerY = item.height / 2;
+  const dx = localX - centerX;
+  const dy = localY - centerY;
+  const radians = ((item.rotation ?? 0) * Math.PI) / 180;
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+  return {
+    x: item.x + centerX + dx * cos - dy * sin,
+    y: item.y + centerY + dx * sin + dy * cos,
+  };
 }
 
 function engravingCorners(item) {

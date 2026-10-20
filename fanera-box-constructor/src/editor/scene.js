@@ -48,6 +48,11 @@ export function createEditorState({ minZoom = 0.1, maxZoom = 20, snapGrid = 5 } 
       if (!interaction.isDragging) interaction = { ...idleInteraction(), mode: selection ? "select" : "idle" };
       return selection ? { ...selection } : null;
     },
+    selectEngraving(id) {
+      selection = id ? { type: "engraving", id } : null;
+      if (!interaction.isDragging) interaction = { ...idleInteraction(), mode: selection ? "select" : "idle" };
+      return selection ? { ...selection } : null;
+    },
     clearSelection() {
       selection = null;
       if (!interaction.isDragging) interaction = idleInteraction();
@@ -155,6 +160,22 @@ export function draggedPlacement(initial, svgDelta, snap) {
 export function getPanelBounds(panel, placement) {
   const points = outlinePoints(panel).map((point) => layoutPoint(point, panel, placement));
   return boundingBox(points);
+}
+
+export function describeEngraving(engraving) {
+  return {
+    id: engraving.id,
+    type: "engraving",
+    title: "Гравировка",
+    panelId: engraving.panelId,
+    panelTitle: PANEL_TITLES[engraving.panelId] ?? engraving.panelId,
+    name: engraving.name ?? "",
+    x: engraving.x,
+    y: engraving.y,
+    width: engraving.width,
+    height: engraving.height,
+    rotation: engraving.rotation ?? 0,
+  };
 }
 
 export function describePanel(panel, placement) {

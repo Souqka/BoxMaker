@@ -8,3 +8,11 @@ export function attachLogo(panel, logo) {
     engraving: [...panel.engraving, logo],
   };
 }
+
+/** Copies panels and attaches stored engravings. Outlines are not rewritten. */
+export function attachEngravings(panels, engravings = []) {
+  return panels.map((panel) => ({
+    ...panel,
+    engraving: engravings.filter((item) => item.panelId === panel.id),
+  }));
+}

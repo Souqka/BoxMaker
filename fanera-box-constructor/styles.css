@@ -158,7 +158,10 @@ button {
   font-size: 0.82rem;
 }
 
-.inspector .warning { color: #8a2e22; }
+.inspector .warning,
+#logo-message { color: #8a2e22; }
+
+#logo-message { margin: 0 0 0.45rem; }
 
 .sheet {
   height: 70vh;
